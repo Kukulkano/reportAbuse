@@ -14,8 +14,8 @@ func notifyHoster(detection detection, hosterMail string) {
 		initHoster()
 	}
 
-	// to := []string{hosterMail, cfg.SmtpCopy}
-	to := []string{cfg.SmtpCopy}
+	to := []string{hosterMail, cfg.SmtpCopy} // sends for real
+	// to := []string{cfg.SmtpCopy} // just for testing
 
 	jData := fmt.Sprintf("{ \"ip\": \"%v\", \"timestamp\": \"%v\" }",
 		detection.ip, detection.timestamp)
