@@ -1,0 +1,20 @@
+{ 
+    "logfiles": [ 
+        "/var/log/apache2/ssl_error_log" 
+    ],
+
+    "databasePath": "abuse_log.db",
+
+    "myPage": "interesting.site.com",
+
+    "regExp": "(?m)\\[(.*?)\\].* \\[client (.*):\\d*\\].*'.*\/var\/www\/myPage\/public(.*)'",
+    "regGroupDate": 1,
+    "regGroupIP": 2,
+    "regGroupPage": 3,
+
+    "minAttacks": 2,
+    "smtpHost": "",
+    "smtpUser": "",
+    "smtpPwd": "",
+    "smtpCopy": ""
+}

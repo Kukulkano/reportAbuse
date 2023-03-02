@@ -1,0 +1,5 @@
+config.json
+*.db
+.vscode
+ssl_*
+*.log
