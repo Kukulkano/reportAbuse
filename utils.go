@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"time"
@@ -26,6 +27,8 @@ func getTimezoneOffset() string {
 // getHosterMail returns the abuse contact email address from
 // the hoster of a given ip using public whois records.
 // Returns empty string in case whois failed to return such address.
+// If there are multiple abuse mailaddresses found, it takes the last one
+// to prevent ripe address usage.
 func getHosterMail(ip string) string {
 	whoisResult, err := whois.Whois(ip)
 	if err != nil {
@@ -36,8 +39,16 @@ func getHosterMail(ip string) string {
 	if len(matches) == 0 {
 		return ""
 	}
-	if len(matches[0]) < 2 {
-		return ""
+
+	useMail := ""
+
+	for _, mail := range matches {
+		if len(mail) == 2 {
+			useMail = mail[1]
+			if *debugMode {
+				fmt.Printf("- NOTE: Found email address %v in whois record.\n", useMail)
+			}
+		}
 	}
-	return matches[0][1]
+	return useMail
 }

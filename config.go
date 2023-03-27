@@ -10,6 +10,7 @@ type Configuration struct {
 	DatabasePath string   `json:"databasePath"`
 	MyPage       string   `json:"myPage"`
 	RegEx        string   `json:"regExp"`
+	Mode         string   `json:"mode"`
 	RegGroupDate int      `json:"regGroupDate"`
 	RegGroupIP   int      `json:"regGroupIP"`
 	RegGroupPage int      `json:"regGroupPage"`
@@ -23,9 +24,9 @@ type Configuration struct {
 var cfg Configuration
 
 func loadConfig() {
-	file, err := os.Open("config.json")
+	file, err := os.Open(*configFile)
 	if err != nil {
-		panic("Missing config.json")
+		panic("Config file not found or not given!")
 	}
 	defer file.Close()
 	decoder := json.NewDecoder(file)

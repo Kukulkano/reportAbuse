@@ -15,7 +15,11 @@ func notifyHoster(detection detection, hosterMail string) {
 	}
 
 	to := []string{hosterMail, cfg.SmtpCopy} // sends for real
-	// to := []string{cfg.SmtpCopy} // just for testing
+
+	if *debugMode {
+		fmt.Printf("- NOTE: Send email only to %v because of debug mode.\n", cfg.SmtpCopy)
+		to = []string{cfg.SmtpCopy} // use just the copy for debug
+	}
 
 	jData := fmt.Sprintf("{ \"ip\": \"%v\", \"timestamp\": \"%v\" }",
 		detection.ip, detection.timestamp)
@@ -73,8 +77,4 @@ func initHoster() {
 		cfg.SmtpUser,
 		cfg.SmtpPwd,
 		host[0])
-
-	if mailserver == nil {
-		panic("Failed to set smtp information. Check your values.")
-	}
 }

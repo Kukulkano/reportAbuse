@@ -1,5 +1,7 @@
 config.json
+config2.json
 *.db
 .vscode
 ssl_*
+apache_*
 *.log

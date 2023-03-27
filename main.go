@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"regexp"
@@ -14,9 +15,20 @@ type detection struct {
 }
 
 var detections map[string]detection
+var debugMode *bool
+var configFile *string
 
 func main() {
 	fmt.Println("Running reportAbuse")
+
+	debugMode = flag.Bool("debug", false, "if available we are debugging")
+	configFile = flag.String("config", "", "path to config json file")
+
+	flag.Parse()
+
+	if *debugMode {
+		fmt.Println("DEBUG MODE. Will not send any emails to the hosters!")
+	}
 
 	loadConfig() // load and check configuration
 
@@ -53,28 +65,50 @@ func examineFile(logFile string) {
 		tim := match[cfg.RegGroupDate]
 		ip := match[cfg.RegGroupIP]
 		page := match[cfg.RegGroupPage]
-		for _, word := range patterns {
-			if strings.Contains(page, "/"+word) {
-				if entry, ok := detections[ip]; ok {
-					// add detected word
-					entry.words = append(entry.words, page)
-					detections[ip] = entry
-				} else {
-					// create new entry
-					var nEntry detection
-					nEntry.timestamp = tim + timeZoneOffset
-					nEntry.words = append(nEntry.words, page)
-					nEntry.ip = ip
-					detections[ip] = nEntry
-				}
-				break
+		if cfg.Mode == "direct" || cfg.Mode == "" {
+			// take all entries found by regex
+			if entry, ok := detections[ip]; ok {
+				// add detected attack
+				entry.words = append(entry.words, page)
+				detections[ip] = entry
+			} else {
+				// create new entry
+				var nEntry detection
+				nEntry.timestamp = tim + timeZoneOffset
+				nEntry.words = append(entry.words, page)
+				nEntry.ip = ip
+				detections[ip] = nEntry
 			}
 		}
+		if cfg.Mode == "page" {
+			// find all entries that match the "bad" words
+			for _, word := range patterns {
+				if strings.Contains(page, "/"+word) {
+					if entry, ok := detections[ip]; ok {
+						// add detected word
+						entry.words = append(entry.words, page)
+						detections[ip] = entry
+					} else {
+						// create new entry
+						var nEntry detection
+						nEntry.timestamp = tim + timeZoneOffset
+						nEntry.words = append(nEntry.words, page)
+						nEntry.ip = ip
+						detections[ip] = nEntry
+					}
+					break
+				}
+			}
+		}
+
 	}
 
 	// thin the processing list using minAttacks config value
 	for key, detection := range detections {
 		if len(detection.words) < cfg.MinAttacks {
+			if *debugMode {
+				fmt.Printf("- NOTE: Skip detected attack from IP %v because of not enough attacks (minAttacks).\n", key)
+			}
 			delete(detections, key)
 		}
 	}
@@ -87,15 +121,19 @@ func examineFile(logFile string) {
 			// ip not yet found in database
 			fmt.Println("- Found new attacker from", key)
 			hosterMail := getHosterMail(key)
-			err = ipDB.Put([]byte(key), []byte(hosterMail))
-			if err != nil {
-				panic("Failed to add entry to database!")
+			if !*debugMode {
+				err = ipDB.Put([]byte(key), []byte(hosterMail))
+				if err != nil {
+					panic("Failed to add entry to database!")
+				}
+			} else {
+				fmt.Printf("- NOTE: Do not remember IP %v because of debug mode.\n", key)
 			}
 			if hosterMail == "" {
-				fmt.Println("Cannot send email because I can't find abuse email")
+				fmt.Println("- Cannot send email because I can't find abuse email")
 				continue // with next entry
 			}
-			fmt.Println("- Sending email to", hosterMail, "Attack timestamp", detection.timestamp)
+			fmt.Println("- Sending email to", hosterMail, "   Attack timestamp", detection.timestamp)
 			notifyHoster(detection, hosterMail)
 		} else {
 			// ip found, remove from processing list
@@ -104,7 +142,5 @@ func examineFile(logFile string) {
 		}
 	}
 
-	fmt.Printf("- Detected %v new attacks and %v already known attackers\n", len(detections), knownCount)
-
-	// pp.Print(detections)
+	fmt.Printf("Detected %v new attacks and %v already known attackers\n", len(detections), knownCount)
 }
